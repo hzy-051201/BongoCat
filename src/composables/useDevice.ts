@@ -43,12 +43,19 @@ const appWindow = getCurrentWebviewWindow()
 export function useDevice() {
   const modelStore = useModelStore()
   const releaseTimers = new Map<string, NodeJS.Timeout>()
+  const physicallyPressedKeys = new Set<string>()
   const appStore = useAppStore()
   const catStore = useCatStore()
   const latestCursorPoint = ref<CursorPoint>()
   const smoothedCursorPoint = ref<CursorPoint>()
   const scaleFactor = ref(1)
-  const { handlePress, handleRelease, handleMouseChange, handleMouseMove } = useModel()
+  const {
+    handlePress,
+    handleRelease,
+    toggleAngleZ,
+    handleMouseChange,
+    handleMouseMove,
+  } = useModel()
 
   const tickerCallback = (ticker: Ticker) => {
     const destination = latestCursorPoint.value
@@ -87,6 +94,7 @@ export function useDevice() {
 
   onUnmounted(() => {
     Ticker.shared.remove(tickerCallback)
+    physicallyPressedKeys.clear()
   })
 
   watch(() => catStore.model.ignoreMouse, (value) => {
@@ -190,6 +198,18 @@ export function useDevice() {
       const nextValue = getSupportedKey(value)
 
       if (!nextValue) return
+
+      if (kind === 'KeyboardPress') {
+        const isFirstPress = !physicallyPressedKeys.has(nextValue)
+
+        physicallyPressedKeys.add(nextValue)
+
+        if (nextValue === 'Space' && isFirstPress) {
+          toggleAngleZ()
+        }
+      } else {
+        physicallyPressedKeys.delete(nextValue)
+      }
 
       if (nextValue === 'CapsLock') {
         return handleAutoRelease(nextValue)
