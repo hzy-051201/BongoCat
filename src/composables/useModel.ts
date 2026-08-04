@@ -18,6 +18,9 @@ import live2d from '../utils/live2d'
 const appWindow = getCurrentWebviewWindow()
 const digitKeys = '1234567890'.split('') as readonly string[]
 const letterKeys = 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('') as readonly string[]
+const ANGLE_Z_MIN = -30
+const ANGLE_Z_MAX = 30
+let keyboardAngleZ = ANGLE_Z_MIN
 
 export interface ModelSize {
   width: number
@@ -74,6 +77,9 @@ export function useModel() {
       await resolveResource(path)
 
       const { width, height, motions, expressions } = await live2d.load(path)
+
+      keyboardAngleZ = ANGLE_Z_MIN
+      live2d.setParameterValue('ParamAngleZ', keyboardAngleZ)
 
       const nextMotions = Object.entries(motions)
 
@@ -136,6 +142,12 @@ export function useModel() {
     catStore.window.scale = round((size.width / width) * 100)
   }
 
+  const toggleAngleZ = () => {
+    keyboardAngleZ = keyboardAngleZ === ANGLE_Z_MIN ? ANGLE_Z_MAX : ANGLE_Z_MIN
+
+    live2d.setParameterValue('ParamAngleZ', keyboardAngleZ)
+  }
+
   const handlePress = (key: string) => {
     const path = modelStore.supportKeys[key]
 
@@ -184,7 +196,6 @@ export function useModel() {
       'ParamMouseY',
       'ParamAngleX',
       'ParamAngleY',
-      'ParamAngleZ',
       'ParamEyeBallX',
       'ParamEyeBallY',
     ]) {
@@ -235,6 +246,7 @@ export function useModel() {
     modelSize,
     handlePress,
     handleRelease,
+    toggleAngleZ,
     handleLoad,
     handleDestroy,
     handleResize,
