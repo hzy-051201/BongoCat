@@ -7,6 +7,7 @@ export default antfu({
     'antfu/if-newline': 'off',
     'style/brace-style': ['error', '1tbs'],
     'ts/no-use-before-define': 'off',
+    'test/no-import-node-test': 'off',
     'unused-imports/no-unused-imports': 'error',
     'vue/max-attributes-per-line': 'error',
     'vue/attributes-order': ['error', {

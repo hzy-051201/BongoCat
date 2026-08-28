@@ -41,6 +41,7 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-locale = "2"
 rdev = { git = "https://github.com/kunkunsh/rdev" }
 windows.workspace = true
+log = "0.4"
 gilrs = { git = "https://github.com/ayangweb/gilrs", default-features = false, features = ["xinput"] }
 
 [target."cfg(target_os = \"macos\")".dependencies]

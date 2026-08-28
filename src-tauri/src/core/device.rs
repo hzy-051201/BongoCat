@@ -40,6 +40,9 @@ static IS_LISTENING: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static IS_RAW_LISTENING: AtomicBool = AtomicBool::new(false);
 
+#[cfg(target_os = "windows")]
+static FIRST_DELTA_LOGGED: AtomicBool = AtomicBool::new(false);
+
 #[command]
 pub async fn start_device_listening(app_handle: AppHandle) -> Result<(), String> {
     if IS_LISTENING.load(Ordering::SeqCst) {
@@ -96,9 +99,13 @@ fn start_raw_input_listener(app_handle: AppHandle) {
 
     *RAW_INPUT_HANDLE.lock().unwrap() = Some(app_handle);
 
-    let _ = std::thread::Builder::new()
+    let spawned = std::thread::Builder::new()
         .name("bongo-cat-raw-input".to_string())
         .spawn(raw_input_message_loop);
+
+    if spawned.is_err() {
+        log::error!("raw input: failed to spawn message loop thread");
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -111,13 +118,13 @@ fn raw_input_message_loop() {
     use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows::Win32::UI::Input::{
-        GetRawInputData, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE, RAWINPUTHEADER, RIDEV_INPUTSINK,
-        RID_INPUT, RIM_TYPEMOUSE, RegisterRawInputDevices,
+        GetRawInputData, HRAWINPUT, MOUSE_MOVE_ABSOLUTE, RAWINPUT, RAWINPUTDEVICE, RAWINPUTHEADER,
+        RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEMOUSE, RegisterRawInputDevices,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, HWND_MESSAGE,
-        MSG, PostQuitMessage, RegisterClassW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE,
-        WINDOW_STYLE, WNDCLASSW, WM_INPUT,
+        MSG, RegisterClassW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE,
+        WNDCLASSW, WM_INPUT,
     };
     use windows::core::PCWSTR;
 
@@ -126,6 +133,10 @@ fn raw_input_message_loop() {
     unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         if msg == WM_INPUT {
             if let Some(delta) = read_raw_mouse_delta(lparam) {
+                if !FIRST_DELTA_LOGGED.swap(true, Ordering::SeqCst) {
+                    log::info!("raw input: received first mouse delta");
+                }
+
                 if let Some(app_handle) = RAW_INPUT_HANDLE.lock().unwrap().as_ref() {
                     let _ = app_handle.emit(
                         "device-changed",
@@ -183,24 +194,36 @@ fn raw_input_message_loop() {
                 return None;
             }
 
+            if (raw.data.mouse.usFlags.0 & MOUSE_MOVE_ABSOLUTE.0) != 0 {
+                return None;
+            }
+
             Some(relative_mouse_delta(raw.data.mouse.lLastX, raw.data.mouse.lLastY))
         }
     }
 
     unsafe {
-        let class_name: Vec<u16> = CLASS_NAME.encode_utf16().collect();
+        let class_name: Vec<u16> = CLASS_NAME.encode_utf16().chain(core::iter::once(0)).collect();
         let class_name_ptr = PCWSTR(class_name.as_ptr());
 
-        let hinstance = GetModuleHandleW(None).unwrap_or_default();
+        let Ok(hmodule) = GetModuleHandleW(None) else {
+            log::error!("raw input: GetModuleHandleW failed");
+
+            return;
+        };
+
+        let hinstance = HINSTANCE(hmodule.0);
 
         let window_class = WNDCLASSW {
             lpfnWndProc: Some(window_proc),
             lpszClassName: class_name_ptr,
-            hInstance: HINSTANCE(hinstance.0),
+            hInstance: hinstance,
             ..Default::default()
         };
 
         if RegisterClassW(&window_class) == 0 {
+            log::error!("raw input: RegisterClassW failed");
+
             return;
         }
 
@@ -215,9 +238,11 @@ fn raw_input_message_loop() {
             0,
             Some(HWND_MESSAGE),
             None,
-            Some(HINSTANCE(hinstance.0)),
+            Some(hinstance),
             None,
         ) else {
+            log::error!("raw input: CreateWindowExW failed");
+
             return;
         };
 
@@ -229,21 +254,30 @@ fn raw_input_message_loop() {
         };
 
         if RegisterRawInputDevices(&[raw_input_device], size_of::<RAWINPUTDEVICE>() as u32).is_err() {
+            log::error!("raw input: RegisterRawInputDevices failed");
+
             let _ = DestroyWindow(hwnd);
 
             return;
         }
 
+        log::info!("raw input: registered RIDEV_INPUTSINK for mouse");
+
         let mut message = MSG::default();
 
-        while GetMessageW(&mut message, None, 0, 0).as_bool() {
+        loop {
+            let result = GetMessageW(&mut message, None, 0, 0);
+
+            if result.0 <= 0 {
+                break;
+            }
+
             let _ = TranslateMessage(&message);
             DispatchMessageW(&message);
         }
 
-        let _ = PostQuitMessage(0);
         let _ = DestroyWindow(hwnd);
-        let _ = UnregisterClassW(class_name_ptr, Some(HINSTANCE(hinstance.0)));
+        let _ = UnregisterClassW(class_name_ptr, Some(hinstance));
     }
 }
 

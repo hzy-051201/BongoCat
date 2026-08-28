@@ -410,6 +410,7 @@ version = "1.1.0"
 dependencies = [
  "fs_extra",
  "gilrs",
+ "log",
  "rdev",
  "serde",
  "serde_json",
@@ -433,6 +434,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "windows",
 ]
 
 [[package]]

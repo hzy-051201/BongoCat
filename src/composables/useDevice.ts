@@ -71,21 +71,33 @@ export function useDevice() {
     height: monitor.size.height,
   })
 
-  const initForcedMouseState = async () => {
-    if (forcedMouseState.value) return true
+  let forcedMouseInitPromise: Promise<boolean> | undefined
 
-    const point = await cursorPosition()
+  const initForcedMouseState = () => {
+    forcedMouseInitPromise ??= (async () => {
+      try {
+        if (!catStore.model.forceMouseMove) return false
 
-    const monitor = await getCursorMonitor(point)
+        const point = await cursorPosition()
 
-    if (!monitor) return false
+        if (!catStore.model.forceMouseMove) return false
 
-    forcedMouseState.value = createForcedMouseState(
-      { x: point.x, y: point.y },
-      toMonitorBounds(monitor),
-    )
+        const monitor = await getCursorMonitor(point)
 
-    return true
+        if (!catStore.model.forceMouseMove || !monitor) return false
+
+        forcedMouseState.value = createForcedMouseState(
+          { x: point.x, y: point.y },
+          toMonitorBounds(monitor),
+        )
+
+        return true
+      } finally {
+        forcedMouseInitPromise = undefined
+      }
+    })()
+
+    return forcedMouseInitPromise
   }
 
   const handleMouseDelta = (delta: CursorPoint) => {
@@ -98,7 +110,7 @@ export function useDevice() {
       }
 
       return void initForcedMouseState().then((ready) => {
-        if (!ready || !forcedMouseState.value) return
+        if (!ready || !forcedMouseState.value || !catStore.model.forceMouseMove) return
 
         latestCursorPoint.value = applyMouseDelta(
           forcedMouseState.value,
@@ -192,6 +204,12 @@ export function useDevice() {
     forcedMouseState.value = void 0
 
     pendingMouseDelta.value = { x: 0, y: 0 }
+
+    void cursorPosition().then((point) => {
+      if (catStore.model.forceMouseMove) return
+
+      latestCursorPoint.value = { x: point.x, y: point.y }
+    })
   })
 
   const startListening = () => {
