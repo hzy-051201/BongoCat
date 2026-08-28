@@ -151,7 +151,7 @@ fn raw_input_message_loop() {
 
             let mut buffer_size = 0u32;
 
-            let read = GetRawInputData(
+            GetRawInputData(
                 raw_input,
                 RID_INPUT,
                 None,
@@ -159,7 +159,7 @@ fn raw_input_message_loop() {
                 size_of::<RAWINPUTHEADER>() as u32,
             );
 
-            if read == 0 {
+            if buffer_size == 0 {
                 return None;
             }
 
