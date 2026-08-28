@@ -26,6 +26,43 @@ const catStore = useCatStore()
     </ProListItem>
 
     <ProListItem
+      v-if="isWindows"
+      :description="$t('pages.preference.cat.hints.forceMouseMove')"
+      :title="$t('pages.preference.cat.labels.forceMouseMove')"
+    >
+      <Switch v-model:checked="catStore.model.forceMouseMove" />
+    </ProListItem>
+
+    <ProListItem
+      v-if="isWindows && catStore.model.forceMouseMove"
+      :description="$t('pages.preference.cat.hints.mouseSpeed')"
+      :title="$t('pages.preference.cat.labels.mouseSpeed')"
+      vertical
+    >
+      <Flex
+        align="center"
+        gap="small"
+      >
+        <Slider
+          v-model:value="catStore.model.mouseSpeed"
+          class="flex-1 m-0!"
+          :max="4"
+          :min="0.25"
+          :step="0.01"
+        />
+
+        <InputNumber
+          v-model:value="catStore.model.mouseSpeed"
+          class="w-20"
+          :max="4"
+          :min="0.25"
+          :precision="2"
+          :step="0.01"
+        />
+      </Flex>
+    </ProListItem>
+
+    <ProListItem
       :description="$t('pages.preference.cat.hints.ignoreMouse')"
       :title="$t('pages.preference.cat.labels.ignoreMouse')"
     >
