@@ -1,14 +1,21 @@
+import type { Monitor } from '@tauri-apps/api/window'
+
 import { invoke } from '@tauri-apps/api/core'
 import { PhysicalPosition } from '@tauri-apps/api/dpi'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { cursorPosition } from '@tauri-apps/api/window'
 import { isNil } from 'es-toolkit'
 import { Ticker } from 'pixi.js'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+import type { ForcedMouseState } from '@/utils/forced-mouse'
+
 import { useAppStore } from '@/stores/app'
 import { useCatStore } from '@/stores/cat'
 import { useModelStore } from '@/stores/model'
+import { applyMouseDelta, createForcedMouseState, reinitializeForcedMouseState } from '@/utils/forced-mouse'
 import { inBetween } from '@/utils/is'
+import { getCursorMonitor } from '@/utils/monitor'
 import { isMac, isWindows } from '@/utils/platform'
 
 import { INVOKE_KEY, LISTEN_KEY, WINDOW_LABEL } from '../constants'
@@ -30,12 +37,17 @@ interface MouseMoveEvent {
   value: CursorPoint
 }
 
+interface MouseDeltaEvent {
+  kind: 'MouseDelta'
+  value: CursorPoint
+}
+
 interface KeyboardEvent {
   kind: 'KeyboardPress' | 'KeyboardRelease'
   value: string
 }
 
-type DeviceEvent = MouseButtonEvent | MouseMoveEvent | KeyboardEvent
+type DeviceEvent = MouseButtonEvent | MouseMoveEvent | MouseDeltaEvent | KeyboardEvent
 
 const DAMPING_DECAY = 0.75
 const appWindow = getCurrentWebviewWindow()
@@ -43,19 +55,89 @@ const appWindow = getCurrentWebviewWindow()
 export function useDevice() {
   const modelStore = useModelStore()
   const releaseTimers = new Map<string, NodeJS.Timeout>()
-  const physicallyPressedKeys = new Set<string>()
   const appStore = useAppStore()
   const catStore = useCatStore()
   const latestCursorPoint = ref<CursorPoint>()
   const smoothedCursorPoint = ref<CursorPoint>()
+  const forcedMouseState = ref<ForcedMouseState>()
+  const pendingMouseDelta = ref<CursorPoint>({ x: 0, y: 0 })
   const scaleFactor = ref(1)
-  const {
-    handlePress,
-    handleRelease,
-    toggleAngleZ,
-    handleMouseChange,
-    handleMouseMove,
-  } = useModel()
+  const { handlePress, handleRelease, handleMouseChange, handleMouseMove } = useModel()
+
+  const toMonitorBounds = (monitor: Monitor) => ({
+    x: monitor.position.x,
+    y: monitor.position.y,
+    width: monitor.size.width,
+    height: monitor.size.height,
+  })
+
+  const initForcedMouseState = async () => {
+    if (forcedMouseState.value) return true
+
+    const point = await cursorPosition()
+
+    const monitor = await getCursorMonitor(point)
+
+    if (!monitor) return false
+
+    forcedMouseState.value = createForcedMouseState(
+      { x: point.x, y: point.y },
+      toMonitorBounds(monitor),
+    )
+
+    return true
+  }
+
+  const handleMouseDelta = (delta: CursorPoint) => {
+    if (!catStore.model.forceMouseMove) return
+
+    if (!forcedMouseState.value) {
+      pendingMouseDelta.value = {
+        x: pendingMouseDelta.value.x + delta.x,
+        y: pendingMouseDelta.value.y + delta.y,
+      }
+
+      return void initForcedMouseState().then((ready) => {
+        if (!ready || !forcedMouseState.value) return
+
+        latestCursorPoint.value = applyMouseDelta(
+          forcedMouseState.value,
+          pendingMouseDelta.value,
+          catStore.model.mouseSpeed,
+        )
+
+        pendingMouseDelta.value = { x: 0, y: 0 }
+      })
+    }
+
+    latestCursorPoint.value = applyMouseDelta(forcedMouseState.value, delta, catStore.model.mouseSpeed)
+  }
+
+  const switchMonitorForAbsoluteCursor = async (point: CursorPoint) => {
+    const state = forcedMouseState.value
+
+    if (!state) return
+
+    const monitor = await getCursorMonitor(new PhysicalPosition(point.x, point.y))
+
+    if (!monitor) return
+
+    const bounds = toMonitorBounds(monitor)
+    const { bounds: current } = state
+
+    if (
+      bounds.x === current.x
+      && bounds.y === current.y
+      && bounds.width === current.width
+      && bounds.height === current.height
+    ) {
+      return
+    }
+
+    reinitializeForcedMouseState(state, point, bounds)
+
+    latestCursorPoint.value = state.point
+  }
 
   const tickerCallback = (ticker: Ticker) => {
     const destination = latestCursorPoint.value
@@ -94,7 +176,6 @@ export function useDevice() {
 
   onUnmounted(() => {
     Ticker.shared.remove(tickerCallback)
-    physicallyPressedKeys.clear()
   })
 
   watch(() => catStore.model.ignoreMouse, (value) => {
@@ -104,6 +185,14 @@ export function useDevice() {
 
     return Ticker.shared.add(tickerCallback)
   }, { immediate: true })
+
+  watch(() => catStore.model.forceMouseMove, (value) => {
+    if (value) return
+
+    forcedMouseState.value = void 0
+
+    pendingMouseDelta.value = { x: 0, y: 0 }
+  })
 
   const startListening = () => {
     invoke(INVOKE_KEY.START_DEVICE_LISTENING)
@@ -199,18 +288,6 @@ export function useDevice() {
 
       if (!nextValue) return
 
-      if (kind === 'KeyboardPress') {
-        const isFirstPress = !physicallyPressedKeys.has(nextValue)
-
-        physicallyPressedKeys.add(nextValue)
-
-        if (nextValue === 'Space' && isFirstPress) {
-          toggleAngleZ()
-        }
-      } else {
-        physicallyPressedKeys.delete(nextValue)
-      }
-
       if (nextValue === 'CapsLock') {
         return handleAutoRelease(nextValue)
       }
@@ -233,7 +310,13 @@ export function useDevice() {
         return handleMouseChange(value)
       case 'MouseRelease':
         return handleMouseChange(value, false)
+      case 'MouseDelta':
+        return handleMouseDelta(value)
       case 'MouseMove':
+        if (isWindows && catStore.model.forceMouseMove) {
+          return void switchMonitorForAbsoluteCursor(value)
+        }
+
         return latestCursorPoint.value = value
     }
   })
