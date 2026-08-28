@@ -10,6 +10,8 @@ export interface CatStore {
     autoReleaseDelay: number
     maxFPS: number
     ignoreMouse: boolean
+    forceMouseMove: boolean
+    mouseSpeed: number
   }
   window: {
     visible: boolean
@@ -56,6 +58,8 @@ export const useCatStore = defineStore('cat', () => {
     autoReleaseDelay: 3,
     maxFPS: 60,
     ignoreMouse: false,
+    forceMouseMove: false,
+    mouseSpeed: 1,
   })
 
   const window = reactive<CatStore['window']>({
