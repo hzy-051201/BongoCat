@@ -26,7 +26,9 @@
           "behavior": "動作與表情",
           "autoReleaseDelay": "按鍵自動釋放延遲",
           "hideOnHover": "滑鼠游標移入隱藏",
-          "maxFPS": "最大幀率"
+          "maxFPS": "最大幀率",
+          "forceMouseMove": "強制移動滑鼠游標",
+          "mouseSpeed": "滑鼠游標移動速度"
         },
         "hints": {
           "mirrorMode": "啟用後，模型將水平鏡像翻轉。",
@@ -40,7 +42,9 @@
           "windowSize": "將滑鼠游標移至視窗邊緣，或按住 Shift 並右鍵拖曳，也可以調整視窗大小。",
           "autoReleaseDelay": "由於 Windows 下部份系統級按鍵無法擷取釋放事件，超時後將自動視為已釋放。",
           "hideOnHover": "啟用後，滑鼠游標懸停視窗時自動隱藏。可設定延遲時間，0 表示立即隱藏。",
-          "maxFPS": "限制模型渲染的最大幀率，降低幀率可以減少 CPU/GPU 佔用。"
+          "maxFPS": "限制模型渲染的最大幀率，降低幀率可以減少 CPU/GPU 佔用。",
+          "forceMouseMove": "適用於鎖定或隱藏系統滑鼠游標的 3D 遊戲。啟用後使用原始相對移動驅動模型，不會移動真實系統滑鼠游標。",
+          "mouseSpeed": "開啟強制移動滑鼠游標後的位移倍率，數值越大模型跟隨移動的幅度越大。"
         }
       },
       "general": {

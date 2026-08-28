@@ -26,7 +26,9 @@
           "behavior": "动作与表情",
           "autoReleaseDelay": "按键自动释放延迟",
           "hideOnHover": "鼠标移入隐藏",
-          "maxFPS": "最大帧率"
+          "maxFPS": "最大帧率",
+          "forceMouseMove": "强制移动鼠标",
+          "mouseSpeed": "鼠标移动速度"
         },
         "hints": {
           "mirrorMode": "启用后，模型将水平镜像翻转。",
@@ -40,7 +42,9 @@
           "windowSize": "将鼠标移至窗口边缘，或按住 Shift 并右键拖动，也可以调整窗口大小。",
           "autoReleaseDelay": "由于 Windows 下部分系统级按键无法捕获释放事件，超时后将自动视为已释放。",
           "hideOnHover": "启用后，鼠标悬停窗口时自动隐藏。可设置延迟时间，0 表示立即隐藏。",
-          "maxFPS": "限制模型渲染的最大帧率，降低帧率可以减少 CPU/GPU 占用。"
+          "maxFPS": "限制模型渲染的最大帧率，降低帧率可以减少 CPU/GPU 占用。",
+          "forceMouseMove": "适用于锁定或隐藏系统光标的 3D 游戏。开启后使用原始相对移动驱动模型，不会移动真实系统光标。",
+          "mouseSpeed": "开启强制移动鼠标后的位移倍率，数值越大模型跟随移动的幅度越大。"
         }
       },
       "general": {

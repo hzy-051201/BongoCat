@@ -26,7 +26,9 @@
           "behavior": "Motions and Expressions",
           "autoReleaseDelay": "Auto Release Delay",
           "hideOnHover": "Hide on Hover",
-          "maxFPS": "Max Frame Rate"
+          "maxFPS": "Max Frame Rate",
+          "forceMouseMove": "Force Mouse Move",
+          "mouseSpeed": "Mouse Move Speed"
         },
         "hints": {
           "mirrorMode": "When enabled, the model will be mirrored horizontally.",
@@ -40,7 +42,9 @@
           "windowSize": "Move mouse to window edge, or hold Shift and right-drag to resize.",
           "autoReleaseDelay": "On Windows, some system keys cannot capture release events and will auto-release after timeout.",
           "hideOnHover": "When enabled, the window hides automatically on mouse hover. You can set a delay; 0 means hide immediately.",
-          "maxFPS": "Limit the maximum frame rate for model rendering. Lowering the frame rate can reduce CPU/GPU usage."
+          "maxFPS": "Limit the maximum frame rate for model rendering. Lowering the frame rate can reduce CPU/GPU usage.",
+          "forceMouseMove": "For 3D games that lock or hide the system cursor. When enabled, the model is driven by raw relative movement; the real system cursor stays untouched.",
+          "mouseSpeed": "Movement multiplier while Force Mouse Move is enabled. Higher values make the model follow farther per input."
         }
       },
       "general": {

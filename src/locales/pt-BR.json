@@ -26,7 +26,9 @@
           "behavior": "Movimentos e Expressões",
           "autoReleaseDelay": "Atraso de Liberação Automática",
           "hideOnHover": "Ocultar ao Passar o Mouse",
-          "maxFPS": "Taxa Máxima de Quadros"
+          "maxFPS": "Taxa Máxima de Quadros",
+          "forceMouseMove": "Forçar Movimento do Mouse",
+          "mouseSpeed": "Velocidade do Movimento do Mouse"
         },
         "hints": {
           "mirrorMode": "Quando ativado, o modelo será invertido horizontalmente.",
@@ -40,7 +42,9 @@
           "windowSize": "Mova o mouse para a borda da janela ou segure Shift e arraste com o botão direito para redimensionar.",
           "autoReleaseDelay": "Devido ao Windows não capturar eventos de liberação de certas teclas de nível do sistema, elas serão automaticamente tratadas como liberadas após um tempo limite.",
           "hideOnHover": "Quando ativado, a janela se oculta automaticamente ao passar o mouse. Você pode definir um atraso; 0 significa ocultar imediatamente.",
-          "maxFPS": "Limitar a taxa máxima de quadros para renderização do modelo. Reduzir a taxa de quadros pode diminuir o uso de CPU/GPU."
+          "maxFPS": "Limitar a taxa máxima de quadros para renderização do modelo. Reduzir a taxa de quadros pode diminuir o uso de CPU/GPU.",
+          "forceMouseMove": "Para jogos 3D que bloqueiam ou ocultam o cursor do sistema. Quando ativado, o modelo é guiado pelo movimento relativo bruto; o cursor real não é movido.",
+          "mouseSpeed": "Multiplicador de movimento com Forçar Movimento do Mouse ativado. Valores maiores fazem o modelo acompanhar mais o movimento."
         }
       },
       "general": {
